@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seeing More Than Three Dimensions</title>
+<style>
+  :root {
+    --page: #edf1f8;
+    --card: #ffffff;
+    --card-line: #dbe1ee;
+    --ink: #131829;
+    --ink-dim: #586184;
+    --ink-faint: #8790a9;
+    --accent: #3a5cdd;
+    --grad-a: #17b6d8;
+    --grad-b: #7a5cff;
+    --track: #dbe2f0;
+    --stage: #05070f;
+    --stage-2: #0c1122;
+    --stage-dim: #9aa4c6;
+    --stage-faint: #626d92;
+    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    font-family: var(--font);
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 700px at 78% -12%, #e7edfb 0%, transparent 55%),
+      radial-gradient(900px 600px at 6% 112%, #ece7fb 0%, transparent 52%),
+      var(--page);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 22px 26px 14px;
+    max-width: 1180px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .head-main { flex: 1; min-width: 280px; }
+  header h1 {
+    font-size: clamp(1.35rem, 2.6vw, 2rem);
+    font-weight: 620;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    color: var(--ink);
+  }
+  header h1 .k {
+    background: linear-gradient(96deg, var(--grad-a) 10%, var(--grad-b) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p {
+    margin-top: 8px;
+    color: var(--ink-dim);
+    max-width: 68ch;
+    font-size: 0.96rem;
+    line-height: 1.55;
+  }
+  .credit {
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+    font-weight: 600;
+    border: 1px solid var(--card-line);
+    background: var(--card);
+    padding: 8px 14px;
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(30, 40, 80, 0.05);
+    white-space: nowrap;
+  }
+
+  .wrap {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 16px;
+    max-width: 1180px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 4px 26px 26px;
+    min-height: 0;
+  }
+
+  .stage {
+    position: relative;
+    border: 1px solid #0c1122;
+    border-radius: 16px;
+    overflow: hidden;
+    background: radial-gradient(120% 120% at 50% 0%, var(--stage-2) 0%, var(--stage) 70%);
+    box-shadow: 0 14px 40px rgba(20, 30, 70, 0.16);
+    min-height: 440px;
+    touch-action: none;
+    cursor: grab;
+  }
+  .stage.grabbing { cursor: grabbing; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .readout {
+    position: absolute;
+    left: 14px; bottom: 12px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--stage-faint);
+    line-height: 1.55;
+    pointer-events: none;
+    letter-spacing: 0.01em;
+  }
+  .readout b { color: var(--stage-dim); font-weight: 600; }
+  .readout .lim { color: #8fb7ff; }
+
+  .hint {
+    position: absolute;
+    right: 14px; top: 12px;
+    font-size: 0.72rem;
+    color: var(--stage-faint);
+    pointer-events: none;
+  }
+  .stamp {
+    position: absolute;
+    right: 14px; bottom: 12px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+    color: rgba(154, 164, 198, 0.5);
+    text-align: right;
+    pointer-events: none;
+  }
+
+  .panel {
+    border: 1px solid var(--card-line);
+    border-radius: 16px;
+    background: var(--card);
+    box-shadow: 0 6px 22px rgba(30, 40, 80, 0.06);
+    padding: 18px 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    align-content: start;
+  }
+
+  .seg {
+    display: flex;
+    gap: 4px;
+    background: #eef2fb;
+    border: 1px solid var(--card-line);
+    border-radius: 10px;
+    padding: 4px;
+  }
+  .seg button {
+    flex: 1;
+    font-family: var(--font);
+    font-size: 0.73rem;
+    color: var(--ink-dim);
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    padding: 7px 3px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 120ms ease, background 120ms ease;
+  }
+  .seg button[aria-pressed="true"] {
+    color: #ffffff;
+    background: var(--accent);
+    font-weight: 600;
+  }
+
+  .field label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+    margin-bottom: 9px;
+  }
+  .field label .val {
+    font-family: var(--mono);
+    color: var(--ink);
+    font-size: 0.86rem;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; border-radius: 4px;
+    background: var(--track); outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 17px; height: 17px; border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid var(--accent);
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(30, 40, 80, 0.18);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 15px; height: 15px; border-radius: 50%;
+    background: #ffffff; border: 3px solid var(--accent); cursor: pointer;
+  }
+
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.86rem;
+    color: var(--ink-dim);
+    cursor: pointer;
+    user-select: none;
+  }
+  .check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  .row { display: flex; gap: 8px; }
+  .btn {
+    flex: 1;
+    font-family: var(--font);
+    font-size: 0.82rem;
+    color: var(--ink);
+    background: #f2f5fc;
+    border: 1px solid var(--card-line);
+    border-radius: 9px;
+    padding: 9px;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .btn:hover { background: #e8edf9; border-color: #c3ccdf; }
+
+  .components {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    line-height: 1.6;
+    color: var(--ink-dim);
+    word-break: break-word;
+    background: #f4f7fd;
+    border: 1px solid var(--card-line);
+    border-radius: 9px;
+    padding: 10px 12px;
+  }
+  .components b { color: var(--ink); font-weight: 600; }
+  .components .lead { color: var(--ink-faint); }
+
+  .note {
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--ink-faint);
+    border-top: 1px solid var(--card-line);
+    padding-top: 16px;
+  }
+  .note strong { color: var(--ink-dim); font-weight: 600; }
+
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: 1fr; padding: 4px 16px 18px; }
+    header { padding: 18px 18px 10px; }
+    .stage { min-height: 360px; }
+    .panel { order: 2; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="head-main">
+      <h1>Seeing more than <span class="k">three dimensions</span></h1>
+      <p>We can not directly visualize more than three dimensions, so we use a lower-dimensional projection instead, much like a shadow cast on a wall. As the object rotates, dimensions that were hidden from view become visible in the projection. The object itself never changes; only the projection we see changes.</p>
+    </div>
+    <div class="credit">Dr. Elbasheer / SEAS-8525</div>
+  </header>
+
+  <div class="wrap">
+    <div class="stage" id="stage">
+      <canvas id="c"></canvas>
+      <div class="hint">drag to rotate &middot; scroll to zoom</div>
+      <div class="readout" id="readout"></div>
+      <div class="stamp">Dr. Elbasheer / SEAS-8525</div>
+    </div>
+
+    <div class="panel">
+      <div class="seg" role="group" aria-label="Geometry">
+        <button id="mode-cube" aria-pressed="true">Hypercube</button>
+        <button id="mode-cloud" aria-pressed="false">Cloud</button>
+        <button id="mode-vec" aria-pressed="false">Vector</button>
+      </div>
+      <div class="seg" role="group" aria-label="Autoencoders">
+        <button id="mode-ae" aria-pressed="false">AE (point)</button>
+        <button id="mode-vae" aria-pressed="false">VAE (distribution)</button>
+      </div>
+
+      <div class="field" id="dims-field">
+        <label for="dims">Dimensions <span class="val" id="dims-val">4</span></label>
+        <input type="range" id="dims" min="2" max="20" step="1" value="4">
+      </div>
+
+      <div class="field" id="clusters-field" style="display:none">
+        <label for="clusters">Clusters in the data <span class="val" id="clusters-val">4</span></label>
+        <input type="range" id="clusters" min="1" max="7" step="1" value="4">
+      </div>
+
+      <div class="field" id="spread-field" style="display:none">
+        <label for="spread">Latent spread <span class="val" id="spread-val">1.0&times;</span></label>
+        <input type="range" id="spread" min="0.2" max="2.5" step="0.05" value="1">
+      </div>
+
+      <label class="check" id="overlay-field">
+        <input type="checkbox" id="overlay-toggle">
+        <span>Overlay a vector (origin to a point)</span>
+      </label>
+
+      <div class="field">
+        <label for="speed">Rotation speed <span class="val" id="speed-val">1.0&times;</span></label>
+        <input type="range" id="speed" min="0" max="2.5" step="0.05" value="1">
+      </div>
+
+      <div class="row">
+        <button class="btn" id="play">Pause</button>
+        <button class="btn" id="reseed">Reshuffle</button>
+      </div>
+
+      <button class="btn" id="resample" style="display:none">Resample z (new draw)</button>
+
+      <div class="components" id="components" style="display:none"></div>
+
+      <p class="note" id="note"></p>
+    </div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  const CUBE_CAP = 8;   // a cube is only legible up to here; 2^N corners past it
+
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+  const stage = document.getElementById("stage");
+  const readout = document.getElementById("readout");
+  const noteEl = document.getElementById("note");
+  const componentsBox = document.getElementById("components");
+
+  const state = {
+    mode: "cube",
+    dims: 4,        // dimensions the space is set to
+    active: 4,      // dimensions actually drawn (cube is capped)
+    clusters: 4,
+    speed: 1,
+    playing: true,
+    seed: 1,
+    overlay: false,
+    head: [],       // vector-tab arrow
+    targetIndex: 0, // which vertex/point the overlay arrow points to
+    vae: null,      // { img, mu, sigma, prior, post, z }
+    vaeMeta: null,
+    vaeSpread: 1,
+    zSeed: 0,
+    ae: null,       // { img, code }
+    aeMeta: null,
+    zoom: 1,
+  };
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  let vertices = [];
+  let edges = [];
+  let colors = [];
+  let planes = [];
+  const planeAngles = {}; // persists across rebuilds so dim changes don't jump
+
+  // ---- fixed toy "encoder": a random but stable map from pixels to 16-D (mu, log-sigma) ----
+  const IMG_N = 12, LAT = 16, PIX = IMG_N * IMG_N;
+  function randn(r) {
+    let u = 0, v = 0;
+    while (u === 0) u = r();
+    while (v === 0) v = r();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  const Wmu = [], Wls = [];
+  (function initEncoder() {
+    const er = mulberry32(1234567);
+    for (let i = 0; i < LAT; i++) {
+      const a = [], b = [];
+      for (let p = 0; p < PIX; p++) { a.push(randn(er) / Math.sqrt(PIX)); b.push(randn(er) / Math.sqrt(PIX)); }
+      Wmu.push(a); Wls.push(b);
+    }
+  })();
+  function makeImage(seed) {
+    const r = mulberry32((seed * 2246822519) % 2147483647 + 11);
+    const img = new Float32Array(PIX);
+    const blobs = 1 + Math.floor(r() * 3);
+    const spots = [];
+    for (let k = 0; k < blobs; k++)
+      spots.push({ cx: r() * IMG_N, cy: r() * IMG_N, s: IMG_N * (0.12 + r() * 0.18), amp: 0.5 + r() * 0.9, sign: r() < 0.25 ? -1 : 1 });
+    let mn = Infinity, mx = -Infinity;
+    for (let y = 0; y < IMG_N; y++) for (let x = 0; x < IMG_N; x++) {
+      let v = 0;
+      for (const b of spots) { const dx = x - b.cx, dy = y - b.cy; v += b.sign * b.amp * Math.exp(-(dx * dx + dy * dy) / (2 * b.s * b.s)); }
+      const idx = y * IMG_N + x; img[idx] = v; if (v < mn) mn = v; if (v > mx) mx = v;
+    }
+    const rng = (mx - mn) || 1;
+    for (let i = 0; i < PIX; i++) img[i] = (img[i] - mn) / rng;
+    return img;
+  }
+  function encode(img) {
+    const mu = new Array(LAT), sigma = new Array(LAT);
+    for (let i = 0; i < LAT; i++) {
+      let a = 0, b = 0;
+      for (let p = 0; p < PIX; p++) { const xp = img[p] - 0.5; a += Wmu[i][p] * xp; b += Wls[i][p] * xp; }
+      mu[i] = Math.tanh(a * 3.0) * 3.0;
+      sigma[i] = Math.min(1.1, Math.max(0.12, Math.exp(0.5 * (b * 3.0)) * 0.5));
+    }
+    return { mu, sigma };
+  }
+  function sampleGauss(mu, sigma, mult, count, seed) {
+    const r = mulberry32((seed >>> 0) || 99);
+    const out = [];
+    for (let k = 0; k < count; k++) {
+      const z = new Array(LAT);
+      for (let i = 0; i < LAT; i++) z[i] = mu[i] + sigma[i] * mult * randn(r);
+      out.push(z);
+    }
+    return out;
+  }
+  function samplePrior(count, seed) {
+    const r = mulberry32((seed >>> 0) || 7);
+    const out = [];
+    for (let k = 0; k < count; k++) {
+      const z = new Array(LAT);
+      for (let i = 0; i < LAT; i++) z[i] = randn(r);
+      out.push(z);
+    }
+    return out;
+  }
+  function buildVAE() {
+    const img = makeImage(state.seed);
+    const enc = encode(img);
+    state.vae = { img, mu: enc.mu, sigma: enc.sigma, prior: null, post: null, z: null };
+    assembleVAE(true);
+  }
+  function assembleVAE(freshPrior) {
+    const v = state.vae;
+    const Kp = 240, Kpost = 240;
+    if (freshPrior || !v.prior) v.prior = samplePrior(Kp, (state.seed * 40503 + 123) >>> 0);
+    v.post = sampleGauss(v.mu, v.sigma, state.vaeSpread, Kpost, ((state.seed * 2654435761) ^ (state.zSeed * 2166136261)) >>> 0);
+    v.z = v.post[0];
+    vertices = [v.mu.slice(), ...v.prior, ...v.post];
+    edges = []; colors = [];
+    state.vaeMeta = { priorStart: 1, priorCount: v.prior.length, postStart: 1 + v.prior.length, postCount: v.post.length };
+  }
+  function buildAE() {
+    const img = makeImage(state.seed);
+    const code = encode(img).mu; // deterministic point, no sampling
+    const context = [];
+    for (let k = 1; k <= 40; k++) context.push(encode(makeImage(state.seed * 131 + k * 97)).mu);
+    state.ae = { img, code };
+    vertices = [code.slice(), ...context];
+    edges = []; colors = [];
+    state.aeMeta = { codeIdx: 0, ctxStart: 1, ctxCount: context.length };
+  }
+
+  function buildHypercube(n) {
+    const V = [];
+    const count = 1 << n;
+    for (let m = 0; m < count; m++) {
+      const p = new Array(n);
+      for (let k = 0; k < n; k++) p[k] = (m & (1 << k)) ? 1 : -1;
+      V.push(p);
+    }
+    const E = [];
+    for (let a = 0; a < count; a++) {
+      for (let k = 0; k < n; k++) {
+        const b = a ^ (1 << k);
+        if (b > a) E.push([a, b]);
+      }
+    }
+    vertices = V; edges = E; colors = [];
+  }
+
+  const clusterHues = [190, 320, 55, 265, 145, 20, 225];
+
+  function buildCloud(n, k) {
+    const rnd = mulberry32(state.seed * 2654435761 % 2147483647);
+    const g = () => {
+      let u = 0, v = 0;
+      while (u === 0) u = rnd();
+      while (v === 0) v = rnd();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    };
+    const perCluster = 130;
+    const spread = 0.85;
+    const centerR = 3.4;
+    const centers = [];
+    for (let c = 0; c < k; c++) {
+      const ctr = new Array(n);
+      for (let d = 0; d < n; d++) ctr[d] = g() * centerR;
+      centers.push(ctr);
+    }
+    const V = [], C = [];
+    for (let c = 0; c < k; c++) {
+      const hue = clusterHues[c % clusterHues.length];
+      for (let i = 0; i < perCluster; i++) {
+        const p = new Array(n);
+        for (let d = 0; d < n; d++) p[d] = centers[c][d] + g() * spread;
+        V.push(p);
+        C.push(hue);
+      }
+    }
+    vertices = V; edges = []; colors = C;
+  }
+
+  function buildVector(n) {
+    const rnd = mulberry32((state.seed * 40503) % 2147483647 + 7);
+    const head = new Array(n);
+    for (let d = 0; d < n; d++) head[d] = (rnd() * 2 - 1) * 2.6;
+    const axisLen = 3.1;
+    const V = [head.slice()];
+    for (let d = 0; d < n; d++) {
+      const e = new Array(n).fill(0);
+      e[d] = axisLen;
+      V.push(e);
+    }
+    vertices = V; edges = []; colors = [];
+    state.head = head;
+  }
+
+  function buildPlanes(n) {
+    const P = [];
+    const push = (i, j, spd) => {
+      if (i < n && j < n) {
+        const key = i + "," + j;
+        if (!(key in planeAngles)) planeAngles[key] = (i * 0.7 + j * 1.3) % 6.2832;
+        P.push({ i, j, spd, key, ang: planeAngles[key] });
+      }
+    };
+    push(0, 1, 0.16);
+    // rotate every extra axis into BOTH screen axes, with distinct non-vanishing speeds,
+    // so higher dimensions actually spread into the view instead of piling on one axis
+    for (let d = 2; d < n; d++) {
+      push(0, d, 0.115 + 0.03 * Math.sin(d * 1.3));
+      push(1, d, 0.09 + 0.03 * Math.cos(d * 0.9));
+    }
+    planes = P;
+  }
+
+  function activeDims() {
+    if (state.mode === "vae" || state.mode === "ae") return LAT;
+    return state.mode === "cube" ? Math.min(state.dims, CUBE_CAP) : state.dims;
+  }
+
+  function rebuild() {
+    const a = activeDims();
+    state.active = a;
+    if (state.mode === "cube") buildHypercube(a);
+    else if (state.mode === "cloud") buildCloud(a, state.clusters);
+    else if (state.mode === "vector") buildVector(a);
+    else if (state.mode === "ae") buildAE();
+    else buildVAE();
+    buildPlanes(a);
+    if (state.mode !== "vae" && state.mode !== "ae" && vertices.length) state.targetIndex = Math.floor(Math.random() * vertices.length);
+    syncPanels();
+    updateReadout();
+    updateNote();
+  }
+
+  const work = [];
+  function ensureWork(n, count) {
+    if (work.length !== count || (work[0] && work[0].length !== n)) {
+      work.length = 0;
+      for (let i = 0; i < count; i++) work.push(new Array(n));
+    }
+  }
+
+  function transform() {
+    const n = state.active;
+    const count = vertices.length;
+    ensureWork(n, count);
+    for (let vi = 0; vi < count; vi++) {
+      const src = vertices[vi], dst = work[vi];
+      for (let d = 0; d < n; d++) dst[d] = src[d];
+      for (let pi = 0; pi < planes.length; pi++) {
+        const pl = planes[pi];
+        const c = Math.cos(pl.ang), s = Math.sin(pl.ang);
+        const a = dst[pl.i], b = dst[pl.j];
+        dst[pl.i] = a * c - b * s;
+        dst[pl.j] = a * s + b * c;
+      }
+    }
+  }
+
+  function depthOf(p, n) {
+    let d = 0, w = 1;
+    for (let k = 2; k < n; k++) { d += p[k] * w; w *= 0.62; }
+    return d;
+  }
+
+  let W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const r = stage.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+
+  function drawArrow(cx, cy, hx, hy) {
+    ctx.save();
+    ctx.shadowColor = "rgba(120,231,255,0.85)";
+    ctx.shadowBlur = 12;
+    const grad = ctx.createLinearGradient(cx, cy, hx, hy);
+    grad.addColorStop(0, "#eafcff");
+    grad.addColorStop(1, "#6ee7ff");
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 3.2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(hx, hy);
+    ctx.stroke();
+    const ang = Math.atan2(hy - cy, hx - cx);
+    const ah = 14, aw = 0.42;
+    ctx.fillStyle = "#6ee7ff";
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(hx - ah * Math.cos(ang - aw), hy - ah * Math.sin(ang - aw));
+    ctx.lineTo(hx - ah * Math.cos(ang + aw), hy - ah * Math.sin(ang + aw));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = "rgba(232,236,251,0.95)";
+    ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 6.2832); ctx.fill();
+  }
+
+  function drawImageInset(fontFam) {
+    const img = state.mode === "ae" ? state.ae.img : state.vae.img;
+    const pad = 14;
+    const box = Math.min(120, W * 0.3);
+    const cell = box / IMG_N;
+    const ox = pad, oy = pad + 16;
+    ctx.fillStyle = "rgba(180,192,224,0.85)";
+    ctx.font = "600 12px " + fontFam;
+    ctx.fillText("input image", ox, pad + 10);
+    for (let y = 0; y < IMG_N; y++) for (let x = 0; x < IMG_N; x++) {
+      const g = Math.round(38 + img[y * IMG_N + x] * 217);
+      ctx.fillStyle = `rgb(${g},${g},${g})`;
+      ctx.fillRect(ox + x * cell, oy + y * cell, cell + 0.6, cell + 0.6);
+    }
+    ctx.strokeStyle = "rgba(120,140,180,0.55)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ox, oy, box, box);
+    ctx.fillStyle = "rgba(160,178,215,0.9)";
+    ctx.font = "600 11px " + fontFam;
+    const cap = state.mode === "ae" ? "encoder  \u2192  z \u2208 R\u00b9\u2076" : "encoder  \u2192  \u03bc, \u03c3 \u2208 R\u00b9\u2076";
+    ctx.fillText(cap, ox, oy + box + 16);
+  }
+
+  function draw() {
+    const n = state.active;
+    ctx.clearRect(0, 0, W, H);
+    const latentMode = state.mode === "vae" || state.mode === "ae";
+    const cx = W / 2, cy = latentMode ? H * 0.56 : H / 2;
+    let scale;
+    if (latentMode) {
+      const mu = state.mode === "ae" ? state.ae.code : state.vae.mu;
+      let mn = 0; for (const x of mu) mn += x * x; mn = Math.sqrt(mn) || 1;
+      scale = (Math.min(W, H) * 0.32 / Math.max(mn, 3.2)) * state.zoom;
+    } else {
+      scale = Math.min(W, H) * (state.mode === "cube" ? 0.30 : (state.mode === "cloud" ? 0.115 : 0.12)) * state.zoom;
+    }
+
+    const count = vertices.length;
+    const px = new Float32Array(count), py = new Float32Array(count), pz = new Float32Array(count);
+    let zmin = Infinity, zmax = -Infinity;
+    for (let i = 0; i < count; i++) {
+      const p = work[i];
+      px[i] = cx + p[0] * scale;
+      py[i] = cy + p[1] * scale;
+      const z = depthOf(p, n);
+      pz[i] = z;
+      if (z < zmin) zmin = z;
+      if (z > zmax) zmax = z;
+    }
+    const zr = (zmax - zmin) || 1;
+    const norm = z => (z - zmin) / zr;
+
+    if (state.mode === "cube") {
+      const order = edges.map((e, idx) => idx)
+        .sort((a, b) => ((pz[edges[a][0]] + pz[edges[a][1]]) - (pz[edges[b][0]] + pz[edges[b][1]])));
+      ctx.lineCap = "round";
+      for (const idx of order) {
+        const [a, b] = edges[idx];
+        const t = norm((pz[a] + pz[b]) / 2);
+        ctx.strokeStyle = `hsla(${200 - t * 90}, 90%, ${34 + t * 46}%, ${0.22 + t * 0.68})`;
+        ctx.lineWidth = 0.7 + t * 1.9;
+        ctx.beginPath();
+        ctx.moveTo(px[a], py[a]);
+        ctx.lineTo(px[b], py[b]);
+        ctx.stroke();
+      }
+      const vorder = Array.from({ length: count }, (_, i) => i).sort((a, b) => pz[a] - pz[b]);
+      for (const i of vorder) {
+        const t = norm(pz[i]);
+        ctx.fillStyle = `hsla(${190 - t * 60}, 95%, ${58 + t * 30}%, ${0.5 + t * 0.5})`;
+        ctx.beginPath();
+        ctx.arc(px[i], py[i], 1.4 + t * 3.2, 0, 6.2832);
+        ctx.fill();
+      }
+      if (state.overlay && count) drawArrow(cx, cy, px[state.targetIndex], py[state.targetIndex]);
+
+    } else if (state.mode === "cloud") {
+      const order = Array.from({ length: count }, (_, i) => i).sort((a, b) => pz[a] - pz[b]);
+      for (const i of order) {
+        const t = norm(pz[i]);
+        ctx.fillStyle = `hsla(${colors[i]}, 85%, ${40 + t * 34}%, ${0.35 + t * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(px[i], py[i], 1.6 + t * 3.6, 0, 6.2832);
+        ctx.fill();
+      }
+      if (state.overlay && count) drawArrow(cx, cy, px[state.targetIndex], py[state.targetIndex]);
+
+    } else if (state.mode === "vector") {
+      ctx.lineCap = "round";
+      ctx.font = "600 11px " + getComputedStyle(document.body).fontFamily;
+      // draw and label every coordinate axis, so the count matches the dimension
+      for (let d = 0; d < n; d++) {
+        const idx = 1 + d;
+        const hx = px[idx], hy = py[idx];
+        const mx = 2 * cx - hx, my = 2 * cy - hy;
+        const t = norm(pz[idx]);
+        ctx.strokeStyle = `rgba(150,170,215,${0.22 + t * 0.4})`;
+        ctx.lineWidth = 0.8 + t * 0.9;
+        ctx.beginPath();
+        ctx.moveTo(mx, my);
+        ctx.lineTo(hx, hy);
+        ctx.stroke();
+        ctx.fillStyle = `rgba(172,188,224,${0.5 + t * 0.42})`;
+        ctx.fillText("x" + (d + 1), hx + 5, hy + 3);
+      }
+      const gx = px[0], gy = py[0];
+      const grad = ctx.createLinearGradient(cx, cy, gx, gy);
+      grad.addColorStop(0, "#17b6d8");
+      grad.addColorStop(1, "#9a7bff");
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 3.4;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(gx, gy);
+      ctx.stroke();
+      const ang = Math.atan2(gy - cy, gx - cx);
+      ctx.fillStyle = "#9a7bff";
+      ctx.beginPath();
+      ctx.moveTo(gx, gy);
+      ctx.lineTo(gx - 14 * Math.cos(ang - 0.42), gy - 14 * Math.sin(ang - 0.42));
+      ctx.lineTo(gx - 14 * Math.cos(ang + 0.42), gy - 14 * Math.sin(ang + 0.42));
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "rgba(232,236,251,0.95)";
+      ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 6.2832); ctx.fill();
+    } else if (state.mode === "vae") {
+      // VAE: the encoder maps the image to a Gaussian in 16-D; we sample z from it
+      const m = state.vaeMeta, fontFam = getComputedStyle(document.body).fontFamily;
+      const pr = [];
+      for (let i = m.priorStart; i < m.priorStart + m.priorCount; i++) pr.push(i);
+      pr.sort((a, b) => pz[a] - pz[b]);
+      for (const i of pr) {
+        const t = norm(pz[i]);
+        ctx.fillStyle = `rgba(150,168,205,${0.08 + t * 0.20})`;
+        ctx.beginPath(); ctx.arc(px[i], py[i], 1.1 + t * 1.7, 0, 6.2832); ctx.fill();
+      }
+      const po = [];
+      for (let i = m.postStart; i < m.postStart + m.postCount; i++) po.push(i);
+      po.sort((a, b) => pz[a] - pz[b]);
+      for (const i of po) {
+        const t = norm(pz[i]);
+        ctx.fillStyle = `hsla(${190 - t * 45}, 90%, ${52 + t * 24}%, ${0.28 + t * 0.55})`;
+        ctx.beginPath(); ctx.arc(px[i], py[i], 1.5 + t * 2.7, 0, 6.2832); ctx.fill();
+      }
+      const mx = px[0], my = py[0];
+      ctx.strokeStyle = "rgba(230,236,251,0.32)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(mx, my); ctx.stroke();
+      ctx.fillStyle = "rgba(206,215,238,0.85)";
+      ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "#eafcff";
+      ctx.beginPath(); ctx.arc(mx, my, 4.5, 0, 6.2832); ctx.fill();
+      const zi = m.postStart, zx = px[zi], zy = py[zi];
+      ctx.strokeStyle = "#ffd36e"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(zx, zy, 6, 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = "#ffd36e";
+      ctx.beginPath(); ctx.arc(zx, zy, 2.6, 0, 6.2832); ctx.fill();
+      ctx.font = "600 12px " + fontFam;
+      ctx.fillStyle = "rgba(180,192,224,0.85)"; ctx.fillText("prior N(0, I)", cx + 8, cy - 8);
+      ctx.fillStyle = "#eafcff"; ctx.fillText("\u03bc", mx + 7, my - 6);
+      ctx.fillStyle = "#ffd36e"; ctx.fillText("z", zx + 9, zy + 4);
+      drawImageInset(fontFam);
+    } else {
+      // AE: the encoder maps the image to a single fixed point, no distribution
+      const m = state.aeMeta, fontFam = getComputedStyle(document.body).fontFamily;
+      const cpts = [];
+      for (let i = m.ctxStart; i < m.ctxStart + m.ctxCount; i++) cpts.push(i);
+      cpts.sort((a, b) => pz[a] - pz[b]);
+      for (const i of cpts) {
+        const t = norm(pz[i]);
+        ctx.fillStyle = `rgba(150,168,205,${0.10 + t * 0.22})`;
+        ctx.beginPath(); ctx.arc(px[i], py[i], 1.4 + t * 1.8, 0, 6.2832); ctx.fill();
+      }
+      const gx = px[0], gy = py[0];
+      ctx.strokeStyle = "rgba(230,236,251,0.32)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(gx, gy); ctx.stroke();
+      ctx.fillStyle = "rgba(206,215,238,0.85)";
+      ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 6.2832); ctx.fill();
+      ctx.save();
+      ctx.shadowColor = "rgba(120,231,255,0.85)"; ctx.shadowBlur = 12;
+      ctx.fillStyle = "#eafcff";
+      ctx.beginPath(); ctx.arc(gx, gy, 5.5, 0, 6.2832); ctx.fill();
+      ctx.restore();
+      ctx.font = "600 12px " + fontFam;
+      ctx.fillStyle = "#eafcff"; ctx.fillText("z (one point)", gx + 10, gy - 6);
+      ctx.fillStyle = "rgba(178,190,222,0.7)"; ctx.fillText("other images", cx + 8, cy - 8);
+      drawImageInset(fontFam);
+    }
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    if (state.playing) {
+      for (const pl of planes) { pl.ang += pl.spd * state.speed * dt; planeAngles[pl.key] = pl.ang; }
+    }
+    transform();
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  const pointers = new Map();
+  let lastPinch = 0, lastX = 0, lastY = 0;
+  stage.addEventListener("pointerdown", e => {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) { lastX = e.clientX; lastY = e.clientY; stage.classList.add("grabbing"); }
+    stage.setPointerCapture(e.pointerId);
+  });
+  stage.addEventListener("pointermove", e => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size >= 2) {
+      const p = [...pointers.values()];
+      const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+      if (lastPinch > 0) state.zoom = Math.max(0.3, Math.min(8, state.zoom * (d / lastPinch)));
+      lastPinch = d;
+      return;
+    }
+    const dx = (e.clientX - lastX) * 0.006;
+    const dy = (e.clientY - lastY) * 0.006;
+    lastX = e.clientX; lastY = e.clientY;
+    for (const pl of planes) {
+      if (pl.i === 0 && pl.j === 2) pl.ang += dx;
+      else if (pl.i === 0 && pl.j === 1 && state.active === 2) pl.ang += dx;
+      if (pl.i === 1 && pl.j === 2) pl.ang += dy;
+      planeAngles[pl.key] = pl.ang;
+    }
+  });
+  const endPtr = e => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) lastPinch = 0;
+    if (pointers.size === 0) stage.classList.remove("grabbing");
+    if (pointers.size === 1) { const p = [...pointers.values()][0]; lastX = p.x; lastY = p.y; }
+  };
+  stage.addEventListener("pointerup", endPtr);
+  stage.addEventListener("pointercancel", endPtr);
+  stage.addEventListener("wheel", e => {
+    e.preventDefault();
+    state.zoom = Math.max(0.3, Math.min(8, state.zoom * Math.exp(-e.deltaY * 0.0015)));
+  }, { passive: false });
+  stage.addEventListener("dblclick", () => { state.zoom = 1; });
+
+  function updateReadout() {
+    const a = state.active;
+    if (state.mode === "cube") {
+      if (state.dims > CUBE_CAP) {
+        readout.innerHTML =
+          `<b>${state.dims}</b>-D space<br><span class="lim">drawing an ${CUBE_CAP}-D cube: <b>${vertices.length}</b> corners, <b>${edges.length}</b> edges &middot; a full ${state.dims}-cube would have 2<sup>${state.dims}</sup></span>`;
+      } else {
+        readout.innerHTML =
+          `<b>${a}</b>-cube &nbsp; <b>${vertices.length}</b> corners &nbsp; <b>${edges.length}</b> edges`;
+      }
+    } else if (state.mode === "cloud") {
+      readout.innerHTML =
+        `<b>${a}</b>-D space &nbsp; <b>${vertices.length}</b> points &nbsp; <b>${state.clusters}</b> clusters`;
+    } else if (state.mode === "vector") {
+      let sq = 0;
+      for (const v of state.head) sq += v * v;
+      readout.innerHTML =
+        `<b>${a}</b>-D vector &nbsp; length <b>${Math.sqrt(sq).toFixed(2)}</b>`;
+    } else if (state.mode === "vae") {
+      readout.innerHTML = `<b>${LAT}</b>-D latent &nbsp; sampling <b>z</b> ~ N(&mu;, &sigma;<sup>2</sup>)`;
+    } else {
+      readout.innerHTML = `<b>${LAT}</b>-D latent &nbsp; one point <b>z</b> = encoder(image)`;
+    }
+  }
+
+  function coordString(vec) {
+    return "( " + vec.map(v => `<b>${v.toFixed(2)}</b>`).join(",&nbsp; ") + " )";
+  }
+
+  function updateNote() {
+    if (state.mode === "cube") {
+      noteEl.innerHTML = `<strong>The shadow trick.</strong> A cube in N dimensions has 2<sup>N</sup> corners, so past ${CUBE_CAP} dimensions it turns into an unreadable tangle. The drawing caps there, but you can keep raising the dimension to make the point: the count explodes while the screen still only offers two axes.`;
+      if (state.overlay) {
+        componentsBox.innerHTML = `<span class="lead">a corner is a vector of &plusmn;1s</span><br>corner = ${coordString(vertices[state.targetIndex] || [])}`;
+      }
+    } else if (state.mode === "cloud") {
+      noteEl.innerHTML = `<strong>Latent space.</strong> Each point is an embedding living in N dimensions. Overlay a vector and the arrow lands on one real point, showing that every embedding is just a vector from the origin. Turn the space: clusters separate and collapse, but the numbers never move.`;
+      if (state.overlay) {
+        componentsBox.innerHTML = `<span class="lead">this embedding as a vector</span><br>point = ${coordString(vertices[state.targetIndex] || [])}`;
+      }
+    } else if (state.mode === "vector") {
+      noteEl.innerHTML = `<strong>A vector is a point with an arrow.</strong> Tail at the origin, head at the coordinate below. Turn it: the arrow's on-screen length and direction keep changing, but the numbers and its true length stay fixed. When the arrow looks short, the vector is leaning into axes you cannot see.`;
+      componentsBox.innerHTML = `<span class="lead">head = coordinate in ${state.active}-D</span><br>${coordString(state.head)}`;
+    } else if (state.mode === "vae") {
+      const v = state.vae;
+      noteEl.innerHTML = `<strong>Mapping to a distribution.</strong> The encoder turns the image into two 16-D vectors: a mean &mu; (where the code sits) and a spread &sigma; (how uncertain it is). So the image becomes a little Gaussian cloud, not a single point. Whenever the decoder needs a code we draw a fresh sample z = &mu; + &sigma;&middot;&epsilon; (the gold dot). The faint cloud at the center is the prior N(0, I) that training pulls every code toward.`;
+      componentsBox.innerHTML =
+        `<span class="lead">encoder output (16-D)</span><br>` +
+        `&mu; = ${coordString(v.mu)}<br>` +
+        `&sigma; = ${coordString(v.sigma)}<br>` +
+        `<span class="lead">one draw: z = &mu; + &sigma;&middot;&epsilon;</span><br>` +
+        `z = ${coordString(v.z)}`;
+    } else {
+      noteEl.innerHTML = `<strong>Mapping to a point.</strong> A vanilla autoencoder's encoder sends the image to one fixed point z in 16-D latent space. Same image in, same point out, with no spread and no sampling. The faint dots are where other images land. Open the VAE tab to watch that same point become a cloud.`;
+      componentsBox.innerHTML = `<span class="lead">encoder output (16-D), a single point</span><br>z = ${coordString(state.ae.code)}`;
+    }
+  }
+
+  function syncPanels() {
+    const m = state.mode;
+    const isVae = m === "vae", isAe = m === "ae";
+    const isImg = isVae || isAe;
+    document.getElementById("dims-field").style.display = isImg ? "none" : "";
+    document.getElementById("clusters-field").style.display = m === "cloud" ? "" : "none";
+    document.getElementById("spread-field").style.display = isVae ? "" : "none";
+    document.getElementById("overlay-field").style.display = (m === "cube" || m === "cloud") ? "flex" : "none";
+    document.getElementById("resample").style.display = isVae ? "" : "none";
+    reseedBtn.textContent = isImg ? "New image" : "Reshuffle";
+    const showComp = isImg || m === "vector" || (state.overlay && (m === "cube" || m === "cloud"));
+    componentsBox.style.display = showComp ? "" : "none";
+  }
+
+  const dimsEl = document.getElementById("dims");
+  const dimsVal = document.getElementById("dims-val");
+  const speedEl = document.getElementById("speed");
+  const speedVal = document.getElementById("speed-val");
+  const clustersEl = document.getElementById("clusters");
+  const clustersVal = document.getElementById("clusters-val");
+  const playBtn = document.getElementById("play");
+  const reseedBtn = document.getElementById("reseed");
+  const cubeBtn = document.getElementById("mode-cube");
+  const cloudBtn = document.getElementById("mode-cloud");
+  const vecBtn = document.getElementById("mode-vec");
+  const vaeBtn = document.getElementById("mode-vae");
+  const aeBtn = document.getElementById("mode-ae");
+  const overlayToggle = document.getElementById("overlay-toggle");
+  const spreadEl = document.getElementById("spread");
+  const spreadVal = document.getElementById("spread-val");
+  const resampleBtn = document.getElementById("resample");
+
+  dimsEl.addEventListener("input", () => {
+    state.dims = +dimsEl.value; dimsVal.textContent = state.dims; rebuild();
+  });
+  speedEl.addEventListener("input", () => {
+    state.speed = +speedEl.value; speedVal.textContent = state.speed.toFixed(2).replace(/0$/, "") + "\u00d7";
+  });
+  clustersEl.addEventListener("input", () => {
+    state.clusters = +clustersEl.value; clustersVal.textContent = state.clusters; rebuild();
+  });
+  overlayToggle.addEventListener("change", () => {
+    state.overlay = overlayToggle.checked; syncPanels(); updateNote();
+  });
+  spreadEl.addEventListener("input", () => {
+    state.vaeSpread = +spreadEl.value;
+    spreadVal.textContent = state.vaeSpread.toFixed(2).replace(/0$/, "") + "\u00d7";
+    if (state.mode === "vae" && state.vae) { assembleVAE(false); updateNote(); }
+  });
+  resampleBtn.addEventListener("click", () => {
+    if (state.mode !== "vae" || !state.vae) return;
+    state.zSeed = (state.zSeed + 1) | 0;
+    assembleVAE(false);
+    updateNote();
+  });
+  playBtn.addEventListener("click", () => {
+    state.playing = !state.playing; playBtn.textContent = state.playing ? "Pause" : "Play";
+  });
+  reseedBtn.addEventListener("click", () => {
+    state.seed = (state.seed * 16807 + 17) % 2147483647;
+    for (const k in planeAngles) planeAngles[k] = Math.random() * 6.2832;
+    rebuild();
+  });
+
+  function setMode(m) {
+    state.mode = m;
+    state.zoom = 1;
+    cubeBtn.setAttribute("aria-pressed", m === "cube");
+    cloudBtn.setAttribute("aria-pressed", m === "cloud");
+    vecBtn.setAttribute("aria-pressed", m === "vector");
+    vaeBtn.setAttribute("aria-pressed", m === "vae");
+    aeBtn.setAttribute("aria-pressed", m === "ae");
+    rebuild();
+  }
+  cubeBtn.addEventListener("click", () => setMode("cube"));
+  cloudBtn.addEventListener("click", () => setMode("cloud"));
+  vecBtn.addEventListener("click", () => setMode("vector"));
+  vaeBtn.addEventListener("click", () => setMode("vae"));
+  aeBtn.addEventListener("click", () => setMode("ae"));
+
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) { state.playing = false; playBtn.textContent = "Play"; }
+
+  window.addEventListener("resize", resize);
+  resize();
+  rebuild();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
